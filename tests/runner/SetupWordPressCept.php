@@ -12,4 +12,6 @@ $I->fillField('user_name', 'admin');
 //$I->fillField('#pass1-text', 'password');
 $I->fillField(['id' => 'pass1-text'], 'password');
 $I->fillField('admin_email', 'admin@email.com');
+$I->checkOption('pw_weak');
 $I->click('.button');
+sleep(3);

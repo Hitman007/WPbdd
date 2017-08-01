@@ -8,21 +8,10 @@
 actor: AcceptanceTester
 modules:
     enabled:
-        - WPDb
         - WPWebDriver
         - Asserts
         - \Helper\Acceptance
     config:
-        WPDb:
-            dsn: 'mysql:host=localhost;dbname=wordpress'
-            user: 'wordpressuser'
-            password: 'password'
-            dump: 'tests/_data/dump.sql'
-            populate: false
-            cleanup: false
-            url: 'http://localhost'
-            urlReplacement: false #replace the hardcoded dump URL with the one above
-            tablePrefix: 'wp_'
         WPWebDriver:
             url: 'http://localhost'
             window_size: false
