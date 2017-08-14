@@ -22,4 +22,4 @@ modules:
             browser: chrome
             capabilities:
               chromeOptions:
-                binary: "/usr/bin/google-chrome --no-sandbox"
+                binary: "/usr/bin/google-chrome"
