@@ -1,0 +1,4 @@
+actor: AssumeNoPhantomRunningTester
+modules:
+    enabled:
+        - \Helper\AssumeNoPhantomRunning
