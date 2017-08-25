@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b
+class ComposerStaticInit465c3bdda1aa90409a2812c626e37a82
 {
     public static $files = array (
         '0e6d7bf4a5811bfa5cf40c5ccd6fae6a' => __DIR__ . '/..' . '/symfony/polyfill-mbstring/bootstrap.php',
@@ -312,6 +312,7 @@ class ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b
         'Codeception\\Extension\\' => 
         array (
             0 => __DIR__ . '/..' . '/codeception/codeception/ext',
+            1 => __DIR__ . '/..' . '/site5/phantoman/src',
         ),
         'Codeception\\' => 
         array (
@@ -373,6 +374,10 @@ class ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b
             'Prophecy\\' => 
             array (
                 0 => __DIR__ . '/..' . '/phpspec/prophecy/src',
+            ),
+            'PhantomInstaller\\' => 
+            array (
+                0 => __DIR__ . '/..' . '/jakoch/phantomjs-installer/src',
             ),
         ),
         'O' => 
@@ -952,11 +957,11 @@ class ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b::$prefixDirsPsr4;
-            $loader->fallbackDirsPsr4 = ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b::$fallbackDirsPsr4;
-            $loader->prefixesPsr0 = ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b::$prefixesPsr0;
-            $loader->classMap = ComposerStaticInitfb7fe02e2bb7b8b36a1101d625aa2c2b::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInit465c3bdda1aa90409a2812c626e37a82::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInit465c3bdda1aa90409a2812c626e37a82::$prefixDirsPsr4;
+            $loader->fallbackDirsPsr4 = ComposerStaticInit465c3bdda1aa90409a2812c626e37a82::$fallbackDirsPsr4;
+            $loader->prefixesPsr0 = ComposerStaticInit465c3bdda1aa90409a2812c626e37a82::$prefixesPsr0;
+            $loader->classMap = ComposerStaticInit465c3bdda1aa90409a2812c626e37a82::$classMap;
 
         }, null, ClassLoader::class);
     }
