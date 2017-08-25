@@ -28,7 +28,7 @@ class Formatter {
 		$format_args = array(
 			'format' => 'table',
 			'fields' => $fields,
-			'field' => null
+			'field' => null,
 		);
 
 		foreach ( array( 'format', 'fields', 'field' ) as $key ) {
@@ -61,9 +61,10 @@ class Formatter {
 	/**
 	 * Display multiple items according to the output arguments.
 	 *
-	 * @param array $items
+	 * @param array      $items
+	 * @param bool|array $ascii_pre_colorized Optional. A boolean or an array of booleans to pass to `format()` if items in the table are pre-colorized. Default false.
 	 */
-	public function display_items( $items ) {
+	public function display_items( $items, $ascii_pre_colorized = false ) {
 		if ( $this->args['field'] ) {
 			$this->show_single_field( $items, $this->args['field'] );
 		} else {
@@ -85,16 +86,17 @@ class Formatter {
 				}
 			}
 
-			$this->format( $items );
+			$this->format( $items, $ascii_pre_colorized );
 		}
 	}
 
 	/**
 	 * Display a single item according to the output arguments.
 	 *
-	 * @param mixed $item
+	 * @param mixed      $item
+	 * @param bool|array $ascii_pre_colorized Optional. A boolean or an array of booleans to pass to `show_multiple_fields()` if the item in the table is pre-colorized. Default false.
 	 */
-	public function display_item( $item ) {
+	public function display_item( $item, $ascii_pre_colorized = false ) {
 		if ( isset( $this->args['field'] ) ) {
 			$item = (object) $item;
 			$key = $this->find_item_key( $item, $this->args['field'] );
@@ -104,57 +106,62 @@ class Formatter {
 			}
 			\WP_CLI::print_value( $value, array( 'format' => $this->args['format'] ) );
 		} else {
-			$this->show_multiple_fields( $item, $this->args['format'] );
+			$this->show_multiple_fields( $item, $this->args['format'], $ascii_pre_colorized );
 		}
 	}
 
 	/**
 	 * Format items according to arguments.
 	 *
-	 * @param array $items
+	 * @param array      $items
+	 * @param bool|array $ascii_pre_colorized Optional. A boolean or an array of booleans to pass to `show_table()` if items in the table are pre-colorized. Default false.
 	 */
-	private function format( $items ) {
+	private function format( $items, $ascii_pre_colorized = false ) {
 		$fields = $this->args['fields'];
 
 		switch ( $this->args['format'] ) {
-		case 'count':
-			if ( !is_array( $items ) ) {
-				$items = iterator_to_array( $items );
-			}
-			echo count( $items );
-			break;
+			case 'count':
+				if ( !is_array( $items ) ) {
+					$items = iterator_to_array( $items );
+				}
+				echo count( $items );
+				break;
 
-		case 'ids':
-			if ( !is_array( $items ) ) {
-				$items = iterator_to_array( $items );
-			}
-			echo implode( ' ', $items );
-			break;
+			case 'ids':
+				if ( !is_array( $items ) ) {
+					$items = iterator_to_array( $items );
+				}
+				echo implode( ' ', $items );
+				break;
 
-		case 'table':
-			self::show_table( $items, $fields );
-			break;
+			case 'table':
+				self::show_table( $items, $fields, $ascii_pre_colorized );
+				break;
 
-		case 'csv':
-			\WP_CLI\Utils\write_csv( STDOUT, $items, $fields );
-			break;
+			case 'csv':
+				\WP_CLI\Utils\write_csv( STDOUT, $items, $fields );
+				break;
 
-		case 'json':
-		case 'yaml':
-			$out = array();
-			foreach ( $items as $item ) {
-				$out[] = \WP_CLI\Utils\pick_fields( $item, $fields );
-			}
+			case 'json':
+			case 'yaml':
+				$out = array();
+				foreach ( $items as $item ) {
+					$out[] = \WP_CLI\Utils\pick_fields( $item, $fields );
+				}
 
-			if ( 'json' === $this->args['format'] ) {
-				echo json_encode( $out );
-			} else if ( 'yaml' === $this->args['format'] ) {
-				echo Spyc::YAMLDump( $out, 2, 0 );
-			}
-			break;
+				if ( 'json' === $this->args['format'] ) {
+					if (defined('JSON_PARTIAL_OUTPUT_ON_ERROR')) {
+						echo json_encode( $out, JSON_PARTIAL_OUTPUT_ON_ERROR );
+					} else {
+						echo json_encode( $out );
+					}
+				} else if ( 'yaml' === $this->args['format'] ) {
+					echo Spyc::YAMLDump( $out, 2, 0 );
+				}
+				break;
 
-		default:
-			\WP_CLI::error( 'Invalid format: ' . $this->args['format'] );
+			default:
+				\WP_CLI::error( 'Invalid format: ' . $this->args['format'] );
 		}
 	}
 
@@ -213,10 +220,11 @@ class Formatter {
 	/**
 	 * Show multiple fields of an object.
 	 *
-	 * @param object|array Data to display
-	 * @param string Format to display the data in
+	 * @param object|array $data                Data to display
+	 * @param string       $format              Format to display the data in
+	 * @param bool|array   $ascii_pre_colorized Optional. A boolean or an array of booleans to pass to `show_table()` if the item in the table is pre-colorized. Default false.
 	 */
-	private function show_multiple_fields( $data, $format ) {
+	private function show_multiple_fields( $data, $format, $ascii_pre_colorized = false ) {
 
 		$true_fields = array();
 		foreach( $this->args['fields'] as $field ) {
@@ -235,25 +243,25 @@ class Formatter {
 
 		switch ( $format ) {
 
-		case 'table':
-		case 'csv':
-			$rows = $this->assoc_array_to_rows( $data );
-			$fields = array( 'Field', 'Value' );
-			if ( 'table' == $format ) {
-				self::show_table( $rows, $fields );
-			} else if ( 'csv' == $format ) {
-				\WP_CLI\Utils\write_csv( STDOUT, $rows, $fields );
-			}
-			break;
+			case 'table':
+			case 'csv':
+				$rows = $this->assoc_array_to_rows( $data );
+				$fields = array( 'Field', 'Value' );
+				if ( 'table' == $format ) {
+					self::show_table( $rows, $fields, $ascii_pre_colorized );
+				} else if ( 'csv' == $format ) {
+					\WP_CLI\Utils\write_csv( STDOUT, $rows, $fields );
+				}
+				break;
 
-		case 'yaml':
-		case 'json':
-			\WP_CLI::print_value( $data, array( 'format' => $format ) );
-			break;
+			case 'yaml':
+			case 'json':
+				\WP_CLI::print_value( $data, array( 'format' => $format ) );
+				break;
 
-		default:
-			\WP_CLI::error( "Invalid format: " . $format );
-			break;
+			default:
+				\WP_CLI::error( "Invalid format: " . $format );
+				break;
 
 		}
 
@@ -262,10 +270,11 @@ class Formatter {
 	/**
 	 * Show items in a \cli\Table.
 	 *
-	 * @param array $items
-	 * @param array $fields
+	 * @param array      $items
+	 * @param array      $fields
+	 * @param bool|array $ascii_pre_colorized Optional. A boolean or an array of booleans to pass to `Table::setAsciiPreColorized()` if items in the table are pre-colorized. Default false.
 	 */
-	private static function show_table( $items, $fields ) {
+	private static function show_table( $items, $fields, $ascii_pre_colorized = false ) {
 		$table = new \cli\Table();
 
 		$enabled = \cli\Colors::shouldColorize();
@@ -273,6 +282,7 @@ class Formatter {
 			\cli\Colors::disable( true );
 		}
 
+		$table->setAsciiPreColorized( $ascii_pre_colorized );
 		$table->setHeaders( $fields );
 
 		foreach ( $items as $item ) {
@@ -305,7 +315,7 @@ class Formatter {
 
 			$rows[] = (object) array(
 				'Field' => $field,
-				'Value' => $value
+				'Value' => $value,
 			);
 		}
 

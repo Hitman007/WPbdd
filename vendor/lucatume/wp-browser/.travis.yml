@@ -70,6 +70,7 @@ before_script:
   - cd /tmp/wordpress
   - wp site create --slug=$wpSubdomain1 --title="$wpSubdomain1Title"
   - wp site create --slug=$wpSubdomain2 --title="$wpSubdomain2Title"
+  - mkdir -p /tmp/wordpress/wp-content/mu-plugins
 
   # flush rewrite rules
   - wp rewrite structure '/%postname%/'
@@ -82,7 +83,7 @@ before_script:
   - sudo env "PATH=$PATH" apache-setup --host="127.0.0.1" --url="$wpUrl" --dir="/tmp/wordpress"
 
   # set the path to the phantomjs bin in Phantoman
-  - sed -i "s_phantomjsbin_$(which phantomjs)_" $TRAVIS_BUILD_DIR/codeception.dist.yml
+  - sed -i "s_%PHANTOMJS%_$(which phantomjs)_" $TRAVIS_BUILD_DIR/codeception.dist.yml
 
   # update WordPress database to avoid prompts
   - wp core update-db --network

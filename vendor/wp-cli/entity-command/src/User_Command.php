@@ -296,17 +296,35 @@ class User_Command extends \WP_CLI\CommandWithDBObject {
 	 * [--user_pass=<password>]
 	 * : The user password. Default: randomly generated
 	 *
-	 * [--user_registered=<yyyy-mm-dd>]
+	 * [--user_registered=<yyyy-mm-dd-hh-ii-ss>]
 	 * : The date the user registered. Default: current date
 	 *
 	 * [--display_name=<name>]
 	 * : The display name.
+	 *
+	 * [--user_nicename=<nice_name>]
+	 * : A string that contains a URL-friendly name for the user. The default is the user's username.
+	 *
+	 * [--user_url=<url>]
+	 * : A string containing the user's URL for the user's web site.
+	 *
+	 * [--user_email=<email>]
+	 * : A string containing the user's email address.
+	 *
+	 * [--nickname=<nickname>]
+	 * : The user's nickname, defaults to the user's username.
 	 *
 	 * [--first_name=<first_name>]
 	 * : The user's first name.
 	 *
 	 * [--last_name=<last_name>]
 	 * : The user's last name.
+	 *
+	 * [--description=<description>]
+	 * : A string containing content about the user.
+	 *
+	 * [--rich_editing=<rich_editing>]
+	 * : A string for whether to enable the rich editor or not. False if not empty.
 	 *
 	 * [--send-email]
 	 * : Send an email to the user with their new account details.
@@ -320,6 +338,10 @@ class User_Command extends \WP_CLI\CommandWithDBObject {
 	 *     $ wp user create bob bob@example.com --role=author
 	 *     Success: Created user 3.
 	 *     Password: k9**&I4vNH(&
+	 *
+	 *     # Create user without showing password upon success
+	 *     $ wp user create ann ann@example.com --porcelain
+	 *     4
 	 */
 	public function create( $args, $assoc_args ) {
 		$user = new stdClass;
@@ -413,6 +435,45 @@ class User_Command extends \WP_CLI\CommandWithDBObject {
 	 *
 	 * <user>...
 	 * : The user login, user email or user ID of the user(s) to update.
+	 *
+	 * [--user_pass=<password>]
+	 * : A string that contains the plain text password for the user.
+	 *
+	 * [--user_login=<login>]
+	 * : A string that contains the user's username for logging in.
+	 *
+	 * [--user_nicename=<nice_name>]
+	 * : A string that contains a URL-friendly name for the user. The default is the user's username.
+	 *
+	 * [--user_url=<url>]
+	 * : A string containing the user's URL for the user's web site.
+	 *
+	 * [--user_email=<email>]
+	 * : A string containing the user's email address.
+	 *
+	 * [--display_name=<display_name>]
+	 * : A string that will be shown on the site. Defaults to user's username.
+	 *
+	 * [--nickname=<nickname>]
+	 * : The user's nickname, defaults to the user's username.
+	 *
+	 * [--first_name=<first_name>]
+	 * : The user's first name.
+	 *
+	 * [--last_name=<last_name>]
+	 * : The user's last name.
+	 *
+	 * [--description=<description>]
+	 * : A string containing content about the user.
+	 *
+	 * [--rich_editing=<rich_editing>]
+	 * : A string for whether to enable the rich editor or not. False if not empty.
+	 *
+	 * [--user_registered=<yyyy-mm-dd-hh-ii-ss>]
+	 * : The date the user registered.
+	 *
+	 * [--role=<role>]
+	 * : A string used to set the user's role.
 	 *
 	 * --<field>=<value>
 	 * : One or more fields to update. For accepted fields, see wp_update_user().

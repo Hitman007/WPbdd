@@ -52,6 +52,21 @@ extensions:
         - 'tad\Codeception\Command\SearchReplace'
 ```
 
+## A word of caution
+Due to WordPress dependency on globals and constants the suites should not be ran at the same time; this means that in place of this:
+
+```bash
+codecept run
+```
+
+This is probably a better idea:
+
+```bash
+codecept run acceptance && codecept run functional && codecept run ...
+```
+
+Doing otherwise will result in fatal errors due to constants, globals and/or classes and methods attempted redefinition.
+
 ## Modules
 While the package name is the same as the first module added to it ("WPBrowser") the package will add more than one module to [Codeception](http://codeception.com/ "Codeception - BDD-style PHP testing.") to ease WordPress testing.  
 Not every module will make sense or work in any suite or type of test case but here's an high level view:
@@ -63,7 +78,8 @@ Not every module will make sense or work in any suite or type of test case but h
 * WPBootstrapper - bootstraps an existing WordPress installation in the same variable scope of the calling function to have access to its methods.
 * WPQueries - allows for assertions to be made on WordPress database access in **integration** tests.
 * WordPress - to be used in **functional** tests it allows sending GET, POST, PUT and DELETE requests to the WordPress installation index without requiring a web server.
-* WPCLI - allows accessing the [wp-cli](http://wp-cli.org/) tool in *acceptance* and *functional* tests.
+* WPCLI - allows accessing the [wp-cli](http://wp-cli.org/) tool in *acceptance* and *functional* tests.  
+* WPFilesystem - an extension of the default Filesystem module providing methods specific to WordPress projects.  
 
 ### WPBrowser configuration
 WPBrowser extends `PHPBrowser` module hence any parameter required and available to that module is required and available in `WPBrowser` as well.  
@@ -380,6 +396,52 @@ $I->cli('wp post create --post_title=Foo --post_content=Foo --post_excerpt=Foo -
 #### Configuration files
 Global and local [configuration files](http://wp-cli.org/config/#config-file) will be ignored; any additional parameter should be specified inline.  
 This prevents tests from running commands that would impact the WordPress installation in a way that would not be reversible (e.g. create or modify the `.htaccess` file); as a general guideline the wrapper is meant to be used to perform database reversible operations.
+
+### WPFilesystem module configuration
+This module can be used in any level of testing and provides methods to navigate and manipulate the WordPress file and folder structure.  
+At a minimum the module requires specifying the WordPress installation root folder:
+
+```yaml
+modules:
+    enabled:
+        WPFilesystem:
+            wpRootFolder: "/var/www/wordpress"
+```
+
+* `wpRootFolder` - string, required; the path to the WordPress installation root folder; the folder that contains the `wp-load.php` file
+* `themes` - string, optional; the path, relative to the WordPress root folder or an absolute path, to the themes folder
+* `plugins` - string, optional; the path, relative to the WordPress root folder or an absolute path, to the plugins folder.
+* `mu-plugins` - string, optional; the path, relative to the WordPress root folder or an absolute path, to the must-use plugins folder
+* `uploads` - string, optional; the path, relative to the WordPress root folder or an absolute path, to the uploads folder
+
+If any one of the optional configuration paths (`plugins`, `mu-plugins`, `themes`, `uploads`) is not specified it will default to the WordPress standard file structure:
+
+```
+wpRootfolder
+  \
+    wp-content
+      \
+        themes
+        plugins
+        mu-plugins
+        uploads
+```
+
+To override the default structure specify the optional paths:
+
+
+```yaml
+modules:
+    enabled:
+        WPFilesystem:
+            wpRootFolder: "/var/www/wp"
+            plugins: "/app/plugins" 
+            mu-plugins: "/app/mu-plugins" 
+            themes: "/themes" 
+            uploads: "/content" 
+```
+
+### Additional commands
 
 #### generate:wpunit
 Generates a test case extending the `\Codeception\TestCase\WPTestCase` class using the
@@ -874,6 +936,10 @@ The module is meant to be a WordPress specific extension of the `Db` module and 
 * haveMenuInDatabase
 * haveMenuItemInDatabase
 * seeTermRelationshipInDatabase
+* haveAttachmentInDatabase (requires `WPFilesystem` module)
+* dontHaveAttachmentOnDatabase
+* seeAttachmentInDatabase
+* dontSeeAttachmentInDatabase
 
 See source code for more detail.
 
@@ -1055,7 +1121,7 @@ extensions:
 The arguments are:
 
 * `mode` - can be `plugin` or `theme` and indicates whether the current Codeception root folder being symlinked is a plugin or a theme one
-* `destination` - the absolute path to the WordPress local installation plugins or themes folder; to take the neverending variety of possible setups into account the extension will make no checks on the nature of the destination: could be any folder.
+* `destination` - the absolute path to the WordPress local installation plugins or themes folder; to take the never ending variety of possible setups into account the extension will make no checks on the nature of the destination: could be any folder.
 * `rootFolder` - optional absolute path to the WordPress plugin or theme to be symlinked root folder; will default to the Codeception root folder
 
 ### Copier
@@ -1128,7 +1194,35 @@ extensions:
                 multisite: /var/www/mu/wp-content/plugins
 ```
 When running a suite specifying more than one environment like
+
 ```bash
 codecept run acceptance --env foo,baz,multisite
 ```
-Then the extension will use the first matched one, in the case above the `multisite` destination will be used.
+Then the extension will use the first matched one, in the case above the `multisite` destination will be used.  
+The `rootFolder` parameter too can be set to be environment-aware and it will follow the same logic as the destination:
+
+```yaml
+extensions:
+    enabled:
+        - tad\WPBrowser\Extension\Symlinker
+    config:
+        tad\WPBrowser\Extension\Symlinker:
+            mode: plugin
+            rootFolder:
+                dev: /
+                dist: /dist
+                default: /
+            destination:
+                default: /var/www/dev/wp-content/plugins
+                dev: /var/www/dev/wp-content/plugins
+                dist: /var/www/dist/wp-content/plugins
+```
+
+Whenrunning a suite specifying more than one environment like
+
+```bash
+codecept run acceptance --env dist
+```
+
+Then the extension will symlink the files from `/dist` into the `/var/www/dist/wp-content/plugins` folder.
+

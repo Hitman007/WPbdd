@@ -76,18 +76,19 @@ class Config_Command extends WP_CLI_Command {
 	 * ## EXAMPLES
 	 *
 	 *     # Standard wp-config.php file
-	 *     $ wp core config --dbname=testing --dbuser=wp --dbpass=securepswd --locale=ro_RO
+	 *     $ wp config create --dbname=testing --dbuser=wp --dbpass=securepswd --locale=ro_RO
 	 *     Success: Generated 'wp-config.php' file.
 	 *
 	 *     # Enable WP_DEBUG and WP_DEBUG_LOG
-	 *     $ wp core config --dbname=testing --dbuser=wp --dbpass=securepswd --extra-php <<PHP
+	 *     $ wp config create --dbname=testing --dbuser=wp --dbpass=securepswd --extra-php <<PHP
 	 *     $ define( 'WP_DEBUG', true );
 	 *     $ define( 'WP_DEBUG_LOG', true );
 	 *     $ PHP
 	 *     Success: Generated 'wp-config.php' file.
 	 *
 	 *     # Avoid disclosing password to bash history by reading from password.txt
-	 *     $ wp core config --dbname=testing --dbuser=wp --prompt=dbpass < password.txt
+	 *     # Using --prompt=dbpass will prompt for the 'dbpass' argument
+	 *     $ wp config create --dbname=testing --dbuser=wp --prompt=dbpass < password.txt
 	 *     Success: Generated 'wp-config.php' file.
 	 */
 	public function create( $_, $assoc_args ) {
@@ -126,10 +127,22 @@ class Config_Command extends WP_CLI_Command {
 			$assoc_args['extra-php'] = file_get_contents( 'php://stdin' );
 		}
 
-		// TODO: adapt more resilient code from wp-admin/setup-config.php
 		if ( ! \WP_CLI\Utils\get_flag_value( $assoc_args, 'skip-salts' ) ) {
-			$assoc_args['keys-and-salts'] = self::_read(
-				'https://api.wordpress.org/secret-key/1.1/salt/' );
+			try {
+				$assoc_args['keys-and-salts'] = true;
+				$assoc_args['auth-key'] = self::unique_key();
+				$assoc_args['secure-auth-key'] = self::unique_key();
+				$assoc_args['logged-in-key'] = self::unique_key();
+				$assoc_args['nonce-key'] = self::unique_key();
+				$assoc_args['auth-salt'] = self::unique_key();
+				$assoc_args['secure-auth-salt'] = self::unique_key();
+				$assoc_args['logged-in-salt'] = self::unique_key();
+				$assoc_args['nonce-salt'] = self::unique_key();
+			} catch ( Exception $e ) {
+				$assoc_args['keys-and-salts'] = false;
+				$assoc_args['keys-and-salts-alt'] = self::_read(
+					'https://api.wordpress.org/secret-key/1.1/salt/' );
+			}
 		}
 
 		if ( \WP_CLI\Utils\wp_version_compare( '4.0', '<' ) ) {
@@ -157,16 +170,20 @@ class Config_Command extends WP_CLI_Command {
 	 *     # Get wp-config.php file path
 	 *     $ wp config path
 	 *     /home/person/htdocs/project/wp-config.php
+	 *
+	 * @when before_wp_load
 	 */
 	public function path() {
 		$path = Utils\locate_wp_config();
 		if ( $path ) {
 			WP_CLI::line( $path );
+		} else {
+			WP_CLI::error( "'wp-config.php' not found." );
 		}
 	}
 
 	/**
-	 * Get variables and constants defined in wp-config.php file.
+	 * Get variables, constants, and file includes defined in wp-config.php file.
 	 *
 	 * ## OPTIONS
 	 *
@@ -221,16 +238,42 @@ class Config_Command extends WP_CLI_Command {
 
 		$assoc_args = array_merge( $defaults, $assoc_args );
 
+		$path = Utils\locate_wp_config();
+		if ( ! $path ) {
+			WP_CLI::error( "'wp-config.php' not found." );
+		}
+
 		$wp_cli_original_defined_constants = get_defined_constants();
 		$wp_cli_original_defined_vars      = get_defined_vars();
+		$wp_cli_original_includes          = get_included_files();
 
 		eval( WP_CLI::get_runner()->get_wp_config_code() );
 
 		$wp_config_vars      = self::get_wp_config_vars( get_defined_vars(), $wp_cli_original_defined_vars, 'variable', array( 'wp_cli_original_defined_vars' ) );
 		$wp_config_constants = self::get_wp_config_vars( get_defined_constants(), $wp_cli_original_defined_constants, 'constant' );
 
-		$get_constant        = ! empty( $assoc_args['constant'] );
-		$get_global          = ! empty( $assoc_args['global'] );
+		foreach ( $wp_config_vars as $key => $value ) {
+			if ( 'wp_cli_original_includes' === $value['key'] ) {
+				$key_backup = $key;
+				break;
+			}
+		}
+
+		unset( $wp_config_vars[ $key_backup ] );
+		$wp_config_vars           = array_values( $wp_config_vars );
+		$wp_config_includes       = array_diff( get_included_files(), $wp_cli_original_includes );
+		$wp_config_includes_array = array();
+
+		foreach ( $wp_config_includes as $key => $value ) {
+			$wp_config_includes_array[] = array(
+				'key'   => basename( $value ),
+				'value' => $value,
+				'type'  => 'includes',
+			);
+		}
+
+		$get_constant = ! empty( $assoc_args['constant'] );
+		$get_global   = ! empty( $assoc_args['global'] );
 
 		if ( $get_constant && $get_global ) {
 			WP_CLI::error( 'Cannot request the value of a constant and a global at the same time.' );
@@ -243,8 +286,7 @@ class Config_Command extends WP_CLI_Command {
 			return;
 		}
 
-
-		WP_CLI\Utils\format_items( $assoc_args['format'], array_merge( $wp_config_vars, $wp_config_constants ), $assoc_args['fields'] );
+		WP_CLI\Utils\format_items( $assoc_args['format'], array_merge( $wp_config_vars, $wp_config_constants, $wp_config_includes_array ), $assoc_args['fields'] );
 	}
 
 	/**
@@ -319,6 +361,28 @@ class Config_Command extends WP_CLI_Command {
 		}
 
 		return $look_into[ $candidate ];
+	}
+
+	/**
+	 * Generate a unique key/salt for the wp-config.php file.
+	 *
+	 * @throws Exception
+	 *
+	 * @return string
+	 */
+	private static function unique_key() {
+		if ( ! function_exists( 'random_int' ) ) {
+			throw new Exception( "'random_int' does not exist" );
+		}
+
+		$chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_ []{}<>~`+=,.;:/?|';
+		$key = '';
+
+		for ( $i = 0; $i < 64; $i++ ) {
+			$key .= substr( $chars, random_int( 0, strlen( $chars ) - 1 ), 1 );
+		}
+
+		return $key;
 	}
 }
 

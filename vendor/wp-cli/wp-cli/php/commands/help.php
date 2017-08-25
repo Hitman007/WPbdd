@@ -124,6 +124,11 @@ class Help_Command extends WP_CLI_Command {
 
 	private static function pass_through_pager( $out ) {
 
+		if ( ! Utils\check_proc_available( null /*context*/, true /*return*/ ) ) {
+			WP_CLI::debug( 'Warning: check_proc_available() failed in pass_through_pager().', 'help' );
+			return $out;
+		}
+
 		if ( false === ( $pager = getenv( 'PAGER' ) ) ) {
 			$pager = Utils\is_windows() ? 'more' : 'less -r';
 		}
@@ -136,7 +141,7 @@ class Help_Command extends WP_CLI_Command {
 		$descriptorspec = array(
 			0 => $fd,
 			1 => STDOUT,
-			2 => STDERR
+			2 => STDERR,
 		);
 
 		return proc_close( proc_open( $pager, $descriptorspec, $pipes ) );

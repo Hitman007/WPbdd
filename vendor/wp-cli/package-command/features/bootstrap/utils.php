@@ -341,6 +341,8 @@ function pick_fields( $item, $fields ) {
  */
 function launch_editor_for_input( $input, $filename = 'WP-CLI' ) {
 
+	check_proc_available( 'launch_editor_for_input' );
+
 	$tmpdir = get_temp_dir();
 
 	do {
@@ -415,6 +417,8 @@ function mysql_host_to_cli_args( $raw_host ) {
 }
 
 function run_mysql_command( $cmd, $assoc_args, $descriptors = null ) {
+	check_proc_available( 'run_mysql_command' );
+
 	if ( !$descriptors )
 		$descriptors = array( STDIN, STDOUT, STDERR );
 
@@ -428,7 +432,7 @@ function run_mysql_command( $cmd, $assoc_args, $descriptors = null ) {
 	$old_pass = getenv( 'MYSQL_PWD' );
 	putenv( 'MYSQL_PWD=' . $pass );
 
-	$final_cmd = $cmd . assoc_args_to_str( $assoc_args );
+	$final_cmd = force_env_on_nix_systems( $cmd ) . assoc_args_to_str( $assoc_args );
 
 	$proc = proc_open( $final_cmd, $descriptors, $pipes );
 	if ( !$proc )
@@ -447,26 +451,13 @@ function run_mysql_command( $cmd, $assoc_args, $descriptors = null ) {
  * IMPORTANT: Automatic HTML escaping is disabled!
  */
 function mustache_render( $template_name, $data = array() ) {
-	// Transform absolute path to relative path inside of Phar
-	if ( inside_phar() && 0 === stripos( $template_name, PHAR_STREAM_PREFIX ) ) {
-		$search = '';
-		$replace = '';
-		if ( file_exists( WP_CLI_ROOT . '/vendor/autoload.php' ) ) {
-			$search = dirname( __DIR__ );
-			$replace = WP_CLI_ROOT;
-		} elseif ( file_exists( dirname( dirname( WP_CLI_ROOT ) ) . '/autoload.php' ) ) {
-			$search = dirname( dirname( dirname( __DIR__ ) ) );
-			$replace = dirname( dirname( dirname( WP_CLI_ROOT ) ) );
-		}
-		$template_name = str_replace( $search, $replace, $template_name );
-	}
 	if ( ! file_exists( $template_name ) )
 		$template_name = WP_CLI_ROOT . "/templates/$template_name";
 
 	$template = file_get_contents( $template_name );
 
 	$m = new \Mustache_Engine( array(
-		'escape' => function ( $val ) { return $val; }
+		'escape' => function ( $val ) { return $val; },
 	) );
 
 	return $m->render( $template, $data );
@@ -519,9 +510,11 @@ function parse_url( $url ) {
 
 /**
  * Check if we're running in a Windows environment (cmd.exe).
+ *
+ * @return bool
  */
 function is_windows() {
-	return strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
+	return false !== ( $test_is_windows = getenv( 'WP_CLI_TEST_IS_WINDOWS' ) ) ? (bool) $test_is_windows : strtoupper(substr(PHP_OS, 0, 3)) === 'WIN';
 }
 
 /**
@@ -533,7 +526,7 @@ function is_windows() {
 function replace_path_consts( $source, $path ) {
 	$replacements = array(
 		'__FILE__' => "'$path'",
-		'__DIR__'  => "'" . dirname( $path ) . "'"
+		'__DIR__'  => "'" . dirname( $path ) . "'",
 	);
 
 	$old = array_keys( $replacements );
@@ -570,7 +563,7 @@ function http_request( $method, $url, $data = null, $headers = array(), $options
 	if ( inside_phar() ) {
 		// cURL can't read Phar archives
 		$options['verify'] = extract_from_phar(
-		WP_CLI_ROOT . '/vendor' . $cert_path );
+		WP_CLI_VENDOR_DIR . $cert_path );
 	} else {
 		foreach( get_vendor_paths() as $vendor_path ) {
 			if ( file_exists( $vendor_path . $cert_path ) ) {
@@ -579,7 +572,7 @@ function http_request( $method, $url, $data = null, $headers = array(), $options
 			}
 		}
 		if ( empty( $options['verify'] ) ){
-			WP_CLI::error_log( "Cannot find SSL certificate." );
+			WP_CLI::error( "Cannot find SSL certificate." );
 		}
 	}
 
@@ -617,20 +610,20 @@ function increment_version( $current_version, $new_version ) {
 	switch ( $new_version ) {
 		case 'same':
 			// do nothing
-		break;
+			break;
 
 		case 'patch':
 			$current_version[0][2]++;
 
 			$current_version = array( $current_version[0] ); // drop possible pre-release info
-		break;
+			break;
 
 		case 'minor':
 			$current_version[0][1]++;
 			$current_version[0][2] = 0;
 
 			$current_version = array( $current_version[0] ); // drop possible pre-release info
-		break;
+			break;
 
 		case 'major':
 			$current_version[0][0]++;
@@ -638,11 +631,11 @@ function increment_version( $current_version, $new_version ) {
 			$current_version[0][2] = 0;
 
 			$current_version = array( $current_version[0] ); // drop possible pre-release info
-		break;
+			break;
 
 		default: // not a keyword
 			$current_version = array( array( $new_version ) );
-		break;
+			break;
 	}
 
 	// reconstruct version string
@@ -706,6 +699,37 @@ function get_flag_value( $assoc_args, $flag, $default = null ) {
 }
 
 /**
+ * Get the home directory.
+ *
+ * @access public
+ * @category System
+ *
+ * @return string
+ */
+function get_home_dir() {
+	$home = getenv( 'HOME' );
+	if ( ! $home ) {
+		// In Windows $HOME may not be defined
+		$home = getenv( 'HOMEDRIVE' ) . getenv( 'HOMEPATH' );
+	}
+
+	return rtrim( $home, '/\\' );
+}
+
+/**
+ * Appends a trailing slash.
+ *
+ * @access public
+ * @category System
+ *
+ * @param string $string What to add the trailing slash to.
+ * @return string String with trailing slash added.
+ */
+function trailingslashit( $string ) {
+	return rtrim( $string, '/\\' ) . '/';
+}
+
+/**
  * Get the system's temp directory. Warns user if it isn't writable.
  *
  * @access public
@@ -716,17 +740,15 @@ function get_flag_value( $assoc_args, $flag, $default = null ) {
 function get_temp_dir() {
 	static $temp = '';
 
-	$trailingslashit = function( $path ) {
-		return rtrim( $path ) . '/';
-	};
+	if ( $temp ) {
+		return $temp;
+	}
 
-	if ( $temp )
-		return $trailingslashit( $temp );
-
-	if ( function_exists( 'sys_get_temp_dir' ) ) {
-		$temp = sys_get_temp_dir();
-	} else if ( ini_get( 'upload_tmp_dir' ) ) {
-		$temp = ini_get( 'upload_tmp_dir' );
+	// `sys_get_temp_dir()` introduced PHP 5.2.1.
+	if ( $try = sys_get_temp_dir() ) {
+		$temp = trailingslashit( $try );
+	} elseif ( $try = ini_get( 'upload_tmp_dir' ) ) {
+		$temp = trailingslashit( $try );
 	} else {
 		$temp = '/tmp/';
 	}
@@ -735,7 +757,7 @@ function get_temp_dir() {
 		\WP_CLI::warning( "Temp directory isn't writable: {$temp}" );
 	}
 
-	return $trailingslashit( $temp );
+	return $temp;
 }
 
 /**
@@ -752,18 +774,24 @@ function get_temp_dir() {
  * @return mixed
  */
 function parse_ssh_url( $url, $component = -1 ) {
-	preg_match( '#^([^:/~]+)(:([\d]+))?((/|~)(.+))?$#', $url, $matches );
+	preg_match( '#^((docker|docker\-compose|ssh):)?(([^@:]+)@)?([^:/~]+)(:([\d]*))?((/|~)(.+))?$#', $url, $matches );
 	$bits = array();
 	foreach( array(
-		1 => 'host',
-		3 => 'port',
-		4 => 'path',
+		2 => 'scheme',
+		4 => 'user',
+		5 => 'host',
+		7 => 'port',
+		8 => 'path',
 	) as $i => $key ) {
 		if ( ! empty( $matches[ $i ] ) ) {
 			$bits[ $key ] = $matches[ $i ];
 		}
 	}
 	switch ( $component ) {
+		case PHP_URL_SCHEME:
+			return isset( $bits['scheme'] ) ? $bits['scheme'] : null;
+		case PHP_URL_USER:
+			return isset( $bits['user'] ) ? $bits['user'] : null;
 		case PHP_URL_HOST:
 			return isset( $bits['host'] ) ? $bits['host'] : null;
 		case PHP_URL_PATH:
@@ -901,6 +929,44 @@ function expand_globs( $paths, $flags = GLOB_BRACE ) {
 }
 
 /**
+ * Get the closest suggestion for a mis-typed target term amongst a list of
+ * options.
+ *
+ * Uses the Levenshtein algorithm to calculate the relative "distance" between
+ * terms.
+ *
+ * If the "distance" to the closest term is higher than the threshold, an empty
+ * string is returned.
+ *
+ * @param string $target    Target term to get a suggestion for.
+ * @param array  $options   Array with possible options.
+ * @param int    $threshold Threshold above which to return an empty string.
+ *
+ * @return string
+ */
+function get_suggestion( $target, array $options, $threshold = 2 ) {
+	if ( empty( $options ) ) {
+		return '';
+	}
+	foreach ( $options as $option ) {
+		$distance = levenshtein( $option, $target );
+		$levenshtein[ $option ] = $distance;
+	}
+
+	// Sort known command strings by distance to user entry.
+	asort( $levenshtein );
+
+	// Fetch the closest command string.
+	reset( $levenshtein );
+	$suggestion = key( $levenshtein );
+
+	// Only return a suggestion if below a given threshold.
+	return $levenshtein[ $suggestion ] <= $threshold && $suggestion !== $target
+		? (string) $suggestion
+		: '';
+}
+
+/**
  * Get a Phar-safe version of a path.
  *
  * For paths inside a Phar, this strips the outer filesystem's location to
@@ -954,4 +1020,50 @@ function is_bundled_command( $command ) {
 	return is_string( $command )
 		? array_key_exists( $command, $classes )
 		: false;
+}
+
+/**
+ * Maybe prefix command string with "/usr/bin/env".
+ * Removes (if there) if Windows, adds (if not there) if not.
+ *
+ * @param string $command
+ *
+ * @return string
+ */
+function force_env_on_nix_systems( $command ) {
+	$env_prefix = '/usr/bin/env ';
+	$env_prefix_len = strlen( $env_prefix );
+	if ( is_windows() ) {
+		if ( 0 === strncmp( $command, $env_prefix, $env_prefix_len ) ) {
+			$command = substr( $command, $env_prefix_len );
+		}
+	} else {
+		if ( 0 !== strncmp( $command, $env_prefix, $env_prefix_len ) ) {
+			$command = $env_prefix . $command;
+		}
+	}
+	return $command;
+}
+
+/**
+ * Check that `proc_open()` and `proc_close()` haven't been disabled.
+ *
+ * @param string $context Optional. If set will appear in error message. Default null.
+ * @param bool   $return  Optional. If set will return false rather than error out. Default false.
+ *
+ * @return bool
+ */
+function check_proc_available( $context = null, $return = false ) {
+	if ( ! function_exists( 'proc_open' ) || ! function_exists( 'proc_close' ) ) {
+		if ( $return ) {
+			return false;
+		}
+		$msg = 'The PHP functions `proc_open()` and/or `proc_close()` are disabled. Please check your PHP ini directive `disable_functions` or suhosin settings.';
+		if ( $context ) {
+			WP_CLI::error( sprintf( "Cannot do '%s': %s", $context, $msg ) );
+		} else {
+			WP_CLI::error( $msg );
+		}
+	}
+	return true;
 }

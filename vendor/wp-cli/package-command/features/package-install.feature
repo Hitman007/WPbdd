@@ -170,6 +170,226 @@ Feature: Install WP-CLI packages
       wp-cli/google-sitemap-generator-cli
       """
 
+  @github-api @shortened
+  Scenario: Install a package from Git using a shortened package identifier
+    Given an empty directory
+
+    When I run `wp package install schlessera/test-command`
+    Then STDOUT should contain:
+      """
+      Installing package schlessera/test-command (dev-master)
+      Updating {PACKAGE_PATH}composer.json to require the package...
+      Registering git@github.com:schlessera/test-command.git as a VCS repository...
+      Using Composer to install the package...
+      """
+    And STDOUT should contain:
+      """
+      Success: Package installed.
+      """
+
+    When I run `wp package list --fields=name,version`
+    Then STDOUT should be a table containing rows:
+      | name                    | version    |
+      | schlessera/test-command | dev-master |
+
+    When I run `wp test-command`
+    Then STDOUT should contain:
+      """
+      Success: Version E.
+      """
+
+    When I run `wp package uninstall schlessera/test-command`
+    Then STDOUT should contain:
+      """
+      Removing require statement from {PACKAGE_PATH}composer.json
+      """
+    And STDOUT should contain:
+      """
+      Success: Uninstalled package.
+      """
+
+    When I run `wp package list --fields=name`
+    Then STDOUT should not contain:
+      """
+      schlessera/test-command
+      """
+
+  @github-api @shortened
+  Scenario: Install a package from Git using a shortened package identifier with a version requirement
+    Given an empty directory
+
+    When I run `wp package install schlessera/test-command:^0`
+    Then STDOUT should contain:
+      """
+      Installing package schlessera/test-command (^0)
+      Updating {PACKAGE_PATH}composer.json to require the package...
+      Registering git@github.com:schlessera/test-command.git as a VCS repository...
+      Using Composer to install the package...
+      """
+    And STDOUT should contain:
+      """
+      Success: Package installed.
+      """
+
+    When I run `wp package list --fields=name,version`
+    Then STDOUT should be a table containing rows:
+      | name                    | version |
+      | schlessera/test-command | v0.2.0  |
+
+    When I run `wp test-command`
+    Then STDOUT should contain:
+      """
+      Success: Version C.
+      """
+
+    When I run `wp package uninstall schlessera/test-command`
+    Then STDOUT should contain:
+      """
+      Removing require statement from {PACKAGE_PATH}composer.json
+      """
+    And STDOUT should contain:
+      """
+      Success: Uninstalled package.
+      """
+
+    When I run `wp package list --fields=name`
+    Then STDOUT should not contain:
+      """
+      schlessera/test-command
+      """
+
+  @github-api @shortened
+  Scenario: Install a package from Git using a shortened package identifier with a specific version
+    Given an empty directory
+
+    When I run `wp package install schlessera/test-command:0.1.0`
+    Then STDOUT should contain:
+      """
+      Installing package schlessera/test-command (0.1.0)
+      Updating {PACKAGE_PATH}composer.json to require the package...
+      Registering git@github.com:schlessera/test-command.git as a VCS repository...
+      Using Composer to install the package...
+      """
+    And STDOUT should contain:
+      """
+      Success: Package installed.
+      """
+
+    When I run `wp package list --fields=name,version`
+    Then STDOUT should be a table containing rows:
+      | name                    | version |
+      | schlessera/test-command | v0.1.0  |
+
+    When I run `wp test-command`
+    Then STDOUT should contain:
+      """
+      Success: Version A.
+      """
+
+    When I run `wp package uninstall schlessera/test-command`
+    Then STDOUT should contain:
+      """
+      Removing require statement from {PACKAGE_PATH}composer.json
+      """
+    And STDOUT should contain:
+      """
+      Success: Uninstalled package.
+      """
+
+    When I run `wp package list --fields=name`
+    Then STDOUT should not contain:
+      """
+      schlessera/test-command
+      """
+
+  @github-api @shortened
+  Scenario: Install a package from Git using a shortened package identifier and a specific commit hash
+    Given an empty directory
+
+    When I run `wp package install schlessera/test-command:dev-master#8e99bba16a65a3cde7405178a6badbb49349f554`
+    Then STDOUT should contain:
+      """
+      Installing package schlessera/test-command (dev-master#8e99bba16a65a3cde7405178a6badbb49349f554)
+      Updating {PACKAGE_PATH}composer.json to require the package...
+      Registering git@github.com:schlessera/test-command.git as a VCS repository...
+      Using Composer to install the package...
+      """
+    And STDOUT should contain:
+      """
+      Success: Package installed.
+      """
+
+    When I run `wp package list --fields=name,version`
+    Then STDOUT should be a table containing rows:
+      | name                    | version    |
+      | schlessera/test-command | dev-master |
+
+    When I run `wp test-command`
+    Then STDOUT should contain:
+      """
+      Success: Version B.
+      """
+
+    When I run `wp package uninstall schlessera/test-command`
+    Then STDOUT should contain:
+      """
+      Removing require statement from {PACKAGE_PATH}composer.json
+      """
+    And STDOUT should contain:
+      """
+      Success: Uninstalled package.
+      """
+
+    When I run `wp package list --fields=name`
+    Then STDOUT should not contain:
+      """
+      schlessera/test-command
+      """
+
+  @github-api @shortened
+  Scenario: Install a package from Git using a shortened package identifier and a branch
+    Given an empty directory
+
+    When I run `wp package install schlessera/test-command:dev-custom-branch`
+    Then STDOUT should contain:
+      """
+      Installing package schlessera/test-command (dev-custom-branch)
+      Updating {PACKAGE_PATH}composer.json to require the package...
+      Registering git@github.com:schlessera/test-command.git as a VCS repository...
+      Using Composer to install the package...
+      """
+    And STDOUT should contain:
+      """
+      Success: Package installed.
+      """
+
+    When I run `wp package list --fields=name,version`
+    Then STDOUT should be a table containing rows:
+      | name                    | version           |
+      | schlessera/test-command | dev-custom-branch |
+
+    When I run `wp test-command`
+    Then STDOUT should contain:
+      """
+      Success: Version D.
+      """
+
+    When I run `wp package uninstall schlessera/test-command`
+    Then STDOUT should contain:
+      """
+      Removing require statement from {PACKAGE_PATH}composer.json
+      """
+    And STDOUT should contain:
+      """
+      Success: Uninstalled package.
+      """
+
+    When I run `wp package list --fields=name`
+    Then STDOUT should not contain:
+      """
+      schlessera/test-command
+      """
+
   Scenario: Install a package in a local zip
     Given an empty directory
     And I run `wget -O google-sitemap-generator-cli.zip https://github.com/wp-cli/google-sitemap-generator-cli/archive/master.zip`

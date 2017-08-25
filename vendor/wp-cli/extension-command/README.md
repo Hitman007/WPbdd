@@ -5,7 +5,7 @@ Manage WordPress plugins and themes.
 
 [![Build Status](https://travis-ci.org/wp-cli/extension-command.svg?branch=master)](https://travis-ci.org/wp-cli/extension-command)
 
-Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contributing)
+Quick links: [Using](#using) | [Installing](#installing) | [Contributing](#contributing) | [Support](#support)
 
 ## Using
 
@@ -526,7 +526,7 @@ wp plugin uninstall <plugin>... [--deactivate] [--skip-delete]
 Update one or more plugins.
 
 ~~~
-wp plugin update [<plugin>...] [--all] [--minor] [--patch] [--format=<format>] [--version=<version>] [--dry-run]
+wp plugin update [<plugin>...] [--all] [--exclude=<name>] [--minor] [--patch] [--format=<format>] [--version=<version>] [--dry-run]
 ~~~
 
 **OPTIONS**
@@ -537,6 +537,9 @@ wp plugin update [<plugin>...] [--all] [--minor] [--patch] [--format=<format>] [
 	[--all]
 		If set, all plugins that have updates will be updated.
 
+	[--exclude=<name>]
+		Comma separated list of plugin names that should be excluded from updating.
+
 	[--minor]
 		Only perform updates for minor releases (e.g. from 1.3 to 1.4 instead of 2.0)
 
@@ -544,7 +547,15 @@ wp plugin update [<plugin>...] [--all] [--minor] [--patch] [--format=<format>] [
 		Only perform updates for patch releases (e.g. from 1.3 to 1.3.3 instead of 1.4)
 
 	[--format=<format>]
-		Output summary as table or summary. Defaults to table.
+		Render output in a particular format.
+		---
+		default: table
+		options:
+		  - table
+		  - csv
+		  - json
+		  - summary
+		---
 
 	[--version=<version>]
 		If set, the plugin will be updated to the specified version.
@@ -583,6 +594,20 @@ wp plugin update [<plugin>...] [--all] [--minor] [--patch] [--format=<format>] [
     | nginx-cache-controller | 3.1.1       | 3.2.0       | Updated |
     +------------------------+-------------+-------------+---------+
     Success: Updated 2 of 2 plugins.
+
+    $ wp plugin update --all --exclude=akismet
+    Enabling Maintenance mode...
+    Downloading update from https://downloads.wordpress.org/plugin/nginx-champuru.3.2.0.zip...
+    Unpacking the update...
+    Installing the latest version...
+    Removing the old version of the plugin...
+    Plugin updated successfully.
+    Disabling Maintenance mode...
+    +------------------------+-------------+-------------+---------+
+    | name                   | old_version | new_version | status  |
+    +------------------------+-------------+-------------+---------+
+    | nginx-cache-controller | 3.1.1       | 3.2.0       | Updated |
+    +------------------------+-------------+-------------+---------+
 
 
 
@@ -1111,7 +1136,7 @@ wp theme status [<theme>]
 Update one or more themes.
 
 ~~~
-wp theme update [<theme>...] [--all] [--format=<format>] [--version=<version>] [--dry-run]
+wp theme update [<theme>...] [--all] [--exclude=<theme-names>] [--format=<format>] [--version=<version>] [--dry-run]
 ~~~
 
 **OPTIONS**
@@ -1122,8 +1147,19 @@ wp theme update [<theme>...] [--all] [--format=<format>] [--version=<version>] [
 	[--all]
 		If set, all themes that have updates will be updated.
 
+	[--exclude=<theme-names>]
+		Comma separated list of theme names that should be excluded from updating.
+
 	[--format=<format>]
-		Output summary as table or summary. Defaults to table.
+		Render output in a particular format.
+		---
+		default: table
+		options:
+		  - table
+		  - csv
+		  - json
+		  - summary
+		---
 
 	[--version=<version>]
 		If set, the theme will be updated to the specified version.
@@ -1153,6 +1189,26 @@ wp theme update [<theme>...] [--all] [--format=<format>] [--version=<version>] [
     +---------------+-------------+-------------+---------+
     Success: Updated 2 of 2 themes.
 
+    # Exclude themes updates when bulk updating the themes
+    $ wp theme update --all --exclude=twentyfifteen
+    Downloading update from https://downloads.wordpress.org/theme/astra.1.0.5.1.zip...
+    Unpacking the update...
+    Installing the latest version...
+    Removing the old version of the theme...
+    Theme updated successfully.
+    Downloading update from https://downloads.wordpress.org/theme/twentyseventeen.1.2.zip...
+    Unpacking the update...
+    Installing the latest version...
+    Removing the old version of the theme...
+    Theme updated successfully.
+    +-----------------+----------+---------+----------------+
+    | name            | status   | version | update_version |
+    +-----------------+----------+---------+----------------+
+    | astra           | inactive | 1.0.1   | 1.0.5.1        |
+    | twentyseventeen | inactive | 1.1     | 1.2            |
+    +-----------------+----------+---------+----------------+
+    Success: Updated 2 of 2 themes.
+
     # Update all themes
     $ wp theme update --all
 
@@ -1170,30 +1226,25 @@ We appreciate you taking the initiative to contribute to this project.
 
 Contributing isn’t limited to just code. We encourage you to contribute in the way that best fits your abilities, by writing tutorials, giving a demo at your local meetup, helping other users with their support questions, or revising our documentation.
 
+For a more thorough introduction, [check out WP-CLI's guide to contributing](https://make.wordpress.org/cli/handbook/contributing/). This package follows those policy and guidelines.
+
 ### Reporting a bug
 
 Think you’ve found a bug? We’d love for you to help us get it fixed.
 
 Before you create a new issue, you should [search existing issues](https://github.com/wp-cli/extension-command/issues?q=label%3Abug%20) to see if there’s an existing resolution to it, or if it’s already been fixed in a newer version.
 
-Once you’ve done a bit of searching and discovered there isn’t an open or fixed issue for your bug, please [create a new issue](https://github.com/wp-cli/extension-command/issues/new) with the following:
-
-1. What you were doing (e.g. "When I run `wp post list`").
-2. What you saw (e.g. "I see a fatal about a class being undefined.").
-3. What you expected to see (e.g. "I expected to see the list of posts.")
-
-Include as much detail as you can, and clear steps to reproduce if possible.
+Once you’ve done a bit of searching and discovered there isn’t an open or fixed issue for your bug, please [create a new issue](https://github.com/wp-cli/extension-command/issues/new). Include as much detail as you can, and clear steps to reproduce if possible. For more guidance, [review our bug report documentation](https://make.wordpress.org/cli/handbook/bug-reports/).
 
 ### Creating a pull request
 
 Want to contribute a new feature? Please first [open a new issue](https://github.com/wp-cli/extension-command/issues/new) to discuss whether the feature is a good fit for the project.
 
-Once you've decided to commit the time to seeing your pull request through, please follow our guidelines for creating a pull request to make sure it's a pleasant experience:
+Once you've decided to commit the time to seeing your pull request through, [please follow our guidelines for creating a pull request](https://make.wordpress.org/cli/handbook/pull-requests/) to make sure it's a pleasant experience. See "[Setting up](https://make.wordpress.org/cli/handbook/pull-requests/#setting-up)" for details specific to working on this package locally.
 
-1. Create a feature branch for each contribution.
-2. Submit your pull request early for feedback.
-3. Include functional tests with your changes. [Read the WP-CLI documentation](https://wp-cli.org/docs/pull-requests/#functional-tests) for an introduction.
-4. Follow the [WordPress Coding Standards](http://make.wordpress.org/core/handbook/coding-standards/).
+## Support
+
+Github issues aren't for general support questions, but there are other venues you can try: http://wp-cli.org/#support
 
 
 *This README.md is generated dynamically from the project's codebase using `wp scaffold package-readme` ([doc](https://github.com/wp-cli/scaffold-package-command#wp-scaffold-package-readme)). To suggest changes, please submit a pull request against the corresponding part of the codebase.*
