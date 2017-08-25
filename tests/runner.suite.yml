@@ -18,8 +18,5 @@ modules:
             adminUsername: 'admin'
             adminPassword: 'password'
             adminPath: '/wp-admin'
-            port: 9515
-            browser: chrome
-            capabilities:
-              chromeOptions:
-                binary: "/usr/bin/google-chrome"
+            port: 4444
+            browser: phantomjs
