@@ -1,8 +1,7 @@
 actor: AcceptanceTester
 modules:
     enabled:
-        - Codeception\Extension\Phantoman
-        - WPDb
+        #- Codeception\Extension\Phantoman
         - WebDriver
         - Asserts
         - \Helper\Acceptance
@@ -12,16 +11,6 @@ modules:
             debug: true
             sslProtocol: any
             ignoreSslErrors: true
-        WPDb:
-            dsn: 'mysql:host=localhost;dbname=wordpress'
-            user: 'wordpressuser'
-            password: 'password'
-            dump: 'tests/_data/dump.sql'
-            populate: false
-            cleanup: false
-            url: 'http://localhost'
-            urlReplacement: false #replace the hardcoded dump URL with the one above
-            tablePrefix: 'wp_'
         WebDriver:
             url: 'http://localhost'
             window_size: false
