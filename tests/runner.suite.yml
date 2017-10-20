@@ -13,7 +13,7 @@ modules:
         - \Helper\Acceptance
     config:
         WPWebDriver:
-            url: 'http://localhost'
+            url: 'http://ec2-54-209-108-87.compute-1.amazonaws.com'
             window_size: false
             adminUsername: 'admin'
             adminPassword: 'password'
